@@ -3,7 +3,7 @@ import React from "react";
 
 const HomeSection = () => {
   return (
-    <section className="flex flex-col items-center pt-20 pb-6 bg-white">
+    <section className="flex flex-col items-center pt-20 pb-6 ">
       <div className="max-w-4xl px-4 text-center">
         {/* Main Heading */}
         <h1
