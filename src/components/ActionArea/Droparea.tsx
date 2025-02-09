@@ -2,8 +2,68 @@
 
 import type React from "react";
 import { useState } from "react";
-import Output from "./Output";
-import ChainOfThoughtProgress from "./ChainOfThoughtProgress"; // <-- Our updated progress component
+import ChainOfThoughtProgress from "./ChainOfThoughtProgress";
+import CreditList from "./CreditList";
+import type { CreditItem } from "@/utils/types";
+
+const finalJson: CreditItem[] = [
+  {
+    accountNumber: "ACC-1001",
+    creditLevel: "approved",
+    description: [
+      "Stable income source",
+      "Good credit history",
+      "Low debt-to-income ratio",
+    ],
+  },
+  {
+    accountNumber: "ACC-1002",
+    creditLevel: "declined",
+    description: [
+      "Multiple late payments",
+      "High credit utilization",
+      "Low credit score",
+    ],
+  },
+  {
+    accountNumber: "ACC-1003",
+    creditLevel: "underReview",
+    riskLevel: "low",
+    description: [
+      "Recent job change",
+      "Limited credit history",
+      "Moderate debt-to-income ratio",
+    ],
+  },
+  {
+    accountNumber: "ACC-1004",
+    creditLevel: "underReview",
+    riskLevel: "high",
+    description: [
+      "Significant outstanding loans",
+      "Multiple recent credit inquiries",
+      "Unstable income",
+    ],
+  },
+  {
+    accountNumber: "ACC-1005",
+    creditLevel: "declined",
+    description: [
+      "Bankruptcy history",
+      "Missed loan payments",
+      "High default risk",
+    ],
+  },
+  {
+    accountNumber: "ACC-1006",
+    creditLevel: "approved",
+    description: [
+      "Excellent payment history",
+      "Diverse credit mix",
+      "Consistently high credit score",
+    ],
+  },
+];
 
 const Droparea = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -13,7 +73,7 @@ const Droparea = () => {
 
   // The entire chain of steps, shown at once
   const [chainOfThought, setChainOfThought] = useState<string[]>([]);
-  // currentStep indicates which step is "active" (the rest that are < currentStep are completed)
+  // currentStep indicates which step is active
   const [currentStep, setCurrentStep] = useState<number>(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,14 +123,20 @@ const Droparea = () => {
   };
 
   /**
-   * Displays all steps at once in gray,
-   * then progressively colors each step orange as it completes.
+   * Simulates chain-of-thought with a parallel server request:
+   * 1) Upload files to /upload
+   * 2) Animate chain-of-thought steps every 2s
+   *    - If server finishes early, skip ahead to final step
+   *    - If we reach final step but server isn't done, hold at final
+   * 3) When both are complete, show the data
    */
-  const simulateChainOfThought = () => {
+  const simulateChainOfThought = async () => {
+    // Just in case, avoid doing anything if no files:
+    if (files.length === 0) return;
+
+    // Reset UI states
     setIsLoading(true);
     setJsonData(null);
-    setChainOfThought([]); // clear old steps
-    setCurrentStep(0); // reset to the beginning
 
     const steps = [
       "Analyzing file contents...",
@@ -81,40 +147,72 @@ const Droparea = () => {
       "Summarizing findings...",
     ];
 
-    // 1) Show all steps immediately in gray
     setChainOfThought(steps);
+    setCurrentStep(0);
 
-    // 2) Animate through them using setTimeout recursively (no promises)
+    let serverResult: any = null;
+    let serverDone = false; // We'll flip to true when the server responds
+
+    // 1) Start the chain-of-thought progression:
+    const totalSteps = steps.length;
     let stepIndex = 0;
-    const delay = 2000; // 2 seconds between each step; adjust as needed
+    const stepDelay = 2000; // 2 seconds per step
 
-    const processStep = () => {
-      // Make the step at 'stepIndex' the "active" one
-      setCurrentStep(stepIndex);
-
+    // We'll store the interval ID so we can clear it if needed
+    const intervalId = setInterval(() => {
       stepIndex++;
-      if (stepIndex <= steps.length) {
-        // Schedule next step
-        setTimeout(processStep, delay);
-      } else {
-        // All steps are completed
-        // currentStep = steps.length means the last step is also marked completed
-        setCurrentStep(steps.length);
+      // If we haven't reached the final step, move forward
+      if (stepIndex <= totalSteps) {
+        setCurrentStep(stepIndex);
+      }
+      // If we've reached or passed the final step OR server is done, stop
+      if (stepIndex >= totalSteps || serverDone) {
+        clearInterval(intervalId);
+        // If the server is done and we have data, show final
+        if (serverDone && serverResult) {
+          setJsonData(serverResult);
+          setIsLoading(false);
+        }
+      }
+    }, stepDelay);
 
-        // Simulated final output
-        const simulatedOutput = {
-          summary: "Analysis complete",
-          entities: ["Entity A", "Entity B", "Entity C"],
-          relationships: ["A is related to B", "B influences C"],
-          insights: ["Insight 1", "Insight 2", "Insight 3"],
-        };
-        setJsonData(simulatedOutput);
+    // 2) Meanwhile, start uploading the files:
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+
+      const response = await fetch("/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await response.json();
+      serverResult = data;
+      serverDone = true;
+
+      // If chain-of-thought steps haven't reached final step, skip to final step
+      if (stepIndex < totalSteps) {
+        setCurrentStep(totalSteps); // jump to the last step
+        clearInterval(intervalId);
+        // Now display the data
+        setJsonData(serverResult);
+        setIsLoading(false);
+      } else {
+        // If steps are already at or beyond final step, just show data
+        setJsonData(serverResult);
         setIsLoading(false);
       }
-    };
-
-    // Start the chain-of-thought progression
-    setTimeout(processStep, delay);
+    } catch (error) {
+      console.error(error);
+      serverDone = true;
+      setIsLoading(false);
+      clearInterval(intervalId);
+      // You might want to show an error message or do something else
+    }
   };
 
   return (
@@ -126,11 +224,10 @@ const Droparea = () => {
         onClick={triggerFileInput}
         onPaste={handlePaste}
         className="flex flex-col items-center justify-center w-[80%] md:w-[50%]
-                   border-2 border-gray-300 border-dashed rounded-lg cursor-pointer
-                   bg-transparent hover:shadow-[inset_0px_0px_20px_4px_#f3f3f3]
-                   p-4 h-auto max-h-[50vh] min-h-[200px] overflow-y-auto relative drop-shadow-lg"
+                   border-2 border-gray-200 border-dashed rounded-lg cursor-pointer
+                   bg-transparent hover:bg-[#fafafa]
+                   p-4 h-auto max-h-[50vh] min-h-[200px] overflow-y-auto relative "
       >
-        {/* Hidden input for file selection */}
         <input
           id="dropzone-file"
           type="file"
@@ -138,14 +235,14 @@ const Droparea = () => {
           multiple
           onChange={handleFileChange}
         />
-        {/* Conditional placeholder text */}
+
         {files.length === 0 && (
           <span className="text-gray-500 text-lg">
             Drag &amp; drop your files here or click to upload
           </span>
         )}
 
-        {/* File Previews inside the drop area */}
+        {/* Files preview */}
         {files.length > 0 && (
           <div className="flex flex-col gap-4 w-full mt-4">
             {files.map((file, index) => (
@@ -196,15 +293,15 @@ const Droparea = () => {
           </div>
         )}
       </div>
-
+      {/* Button Div */}
       <div>
         <button
           onClick={simulateChainOfThought}
           className="
             px-5
             py-2
-            bg-orange-500
-            hover:bg-orange-600
+            bg-orange-600
+            hover:bg-orange-500
             text-white
             font-medium
             rounded-md
@@ -212,14 +309,15 @@ const Droparea = () => {
             duration-200
             flex items-center justify-center
             mt-7
-            "
-          disabled={isLoading}
+            cursor-pointer
+          "
+          disabled={isLoading || files.length === 0} // disable if already processing or no files
         >
           {isLoading ? "Processing..." : "Next Step"}
         </button>
       </div>
 
-      {/* Chain of Thought Analysis Progress */}
+      {/* Display chain-of-thought if steps are set */}
       {chainOfThought.length > 0 && (
         <ChainOfThoughtProgress
           chainOfThought={chainOfThought}
@@ -227,8 +325,9 @@ const Droparea = () => {
         />
       )}
 
-      {/* Output */}
-      {jsonData && <Output jsonData={jsonData} />}
+      {finalJson && (
+        <CreditList finalJson={finalJson} currenState={isLoading} />
+      )}
     </div>
   );
 };
