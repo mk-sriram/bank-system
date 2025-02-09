@@ -1,26 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CreditListProps } from "@/utils/types";
 
 export default function CreditList({ finalJson }: CreditListProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
+  // Set loading based on the presence of finalJson; fallback to 1500ms simulation.
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleToggle = (index: number) => {
+    if (finalJson && Array.isArray(finalJson) && finalJson.length > 0) {
+      setLoading(false);
+    } else {
+      const timer = setTimeout(() => setLoading(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [finalJson]);
+  console.log("FNIALSJON", finalJson[0]);
+  const handleToggle = useCallback((index: number) => {
     setExpanded((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
-  };
+  }, []);
 
-  const renderCreditIcon = (creditLevel: string) => {
+  const renderCreditIcon = useCallback((creditLevel: string) => {
     switch (creditLevel) {
       case "approved":
         return (
@@ -67,8 +71,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
               d="M8.257 3.099c.764-1.36 2.722-1.36 
                  3.486 0l6.514 11.615c.75 1.338-.213 3.036-1.742 
                  3.036H3.486c-1.53 0-2.492-1.698-1.742-3.036L8.257 
-                 3.1zM11 14a1 1 0 10-2 0 1 1 0 002 
-                 0zm-1-2a1 1 0 01-1-1V7a1 1 0 
+                 3.1zM11 14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 0 01-1-1V7a1 1 0 
                  112 0v4a1 1 0 01-1 1z"
               clipRule="evenodd"
             />
@@ -77,13 +80,13 @@ export default function CreditList({ finalJson }: CreditListProps) {
       default:
         return null;
     }
-  };
+  }, []);
 
   if (loading) {
     return (
       <div className="mx-auto mt-8 w-[38rem] bg-white shadow-lg sm:rounded-lg">
         <ul role="list" className="divide-y divide-gray-200">
-          {Array(6)
+          {Array(3)
             .fill(null)
             .map((_, index) => (
               <li
@@ -98,7 +101,6 @@ export default function CreditList({ finalJson }: CreditListProps) {
                   </div>
                   <div className="h-5 w-5 bg-gray-300 rounded"></div>
                 </div>
-
                 {/* Expanded panel (mimic animation for expansion) */}
                 {index % 2 === 0 && (
                   <div className="mt-2 text-sm text-gray-600 flex justify-end">
@@ -112,6 +114,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
     );
   }
 
+  console.log(finalJson);
   return (
     <div className="mx-auto mt-8 w-[38rem] bg-white shadow-lg sm:rounded-lg">
       <ul role="list" className="divide-y divide-gray-200">
@@ -145,7 +148,6 @@ export default function CreditList({ finalJson }: CreditListProps) {
               </div>
               <div>{renderCreditIcon(person.creditLevel)}</div>
             </div>
-
             {/* Expanded panel */}
             {expanded[index] && (
               <div className="mt-2 text-sm text-gray-600 flex justify-end">

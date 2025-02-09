@@ -83,134 +83,110 @@ export async function POST(request: NextRequest) {
 
   try {
     const genAI = initializeGenAI();
-
-    // Retrieve the form data from the request
     const formData = await request.formData();
 
-    // Try to get the file from either "file" or "files"
-    const fileField = formData.get("file") || formData.get("files");
-    if (!fileField) {
+    // Assume multiple files are attached under the "files" key
+    const fileFields = formData.getAll("files");
+    if (!fileFields || fileFields.length === 0) {
       console.error("No file provided in the request.");
       return NextResponse.json({ error: "File is required." }, { status: 400 });
     }
 
-    // Cast the file to a Blob and log some file info
-    const fileBlob = fileField as Blob;
-    console.log("Received file:", fileBlob);
-    console.log("File type:", fileBlob.type);
+    // Function to process a single file
+    const processFile = async (fileField: any) => {
+      // Cast the file to a Blob
+      const fileBlob = fileField as Blob;
+      if (
+        !["application/pdf", "image/png", "image/jpeg"].includes(fileBlob.type)
+      ) {
+        throw new Error(
+          "Invalid file type. Only PDF, PNG, and JPEG are allowed."
+        );
+      }
+      const arrayBuffer = await fileBlob.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64File = buffer.toString("base64");
 
-    // Check file type – only allow PDF, PNG, or JPEG files
-    if (
-      !["application/pdf", "image/png", "image/jpeg"].includes(fileBlob.type)
-    ) {
-      console.error("Invalid file type:", fileBlob.type);
-      return NextResponse.json(
-        { error: "Invalid file type. Only PDF, PNG, and JPEG are allowed." },
-        { status: 400 }
-      );
-    }
-
-    // Convert the file to base64
-    const arrayBuffer = await fileBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64File = buffer.toString("base64");
-
-    // Prepare JSON Schema for the Gemini API
-
-    const schema = {
-      description:
-        "Analysis of a bank statement for a single account's creditworthiness",
-      type: SchemaType.OBJECT,
-      properties: {
-        accountNumber: {
-          type: SchemaType.STRING,
-          description:
-            "Actual account number extracted from the bank statement",
-        },
-        creditLevel: {
-          type: SchemaType.STRING,
-          enum: ["approved", "declined", "underReview"],
-          description: "Credit decision for the account holder",
-        },
-        riskLevel: {
-          type: SchemaType.STRING,
-          enum: ["low", "medium", "high"],
-          description: "Risk level if creditLevel is 'underReview'",
-          nullable: true,
-        },
-        description: {
-          type: SchemaType.ARRAY,
-          items: {
+      // Prepare JSON Schema and prompt (as before)
+      const schema = {
+        description:
+          "Analysis of a bank statement for a single account's creditworthiness",
+        type: SchemaType.OBJECT,
+        properties: {
+          accountNumber: {
             type: SchemaType.STRING,
+            description:
+              "Actual account number extracted from the bank statement",
           },
-          description: "List of reasons supporting the credit decision",
+          creditLevel: {
+            type: SchemaType.STRING,
+            enum: ["approved", "declined", "underReview"],
+            description: "Credit decision for the account holder",
+          },
+          riskLevel: {
+            type: SchemaType.STRING,
+            enum: ["low", "medium", "high"],
+            description: "Risk level if creditLevel is 'underReview'",
+            nullable: true,
+          },
+          description: {
+            type: SchemaType.ARRAY,
+            items: {
+              type: SchemaType.STRING,
+            },
+            description: "List of reasons supporting the credit decision",
+          },
         },
-      },
-      required: ["accountNumber", "creditLevel", "description"],
+        required: ["accountNumber", "creditLevel", "description"],
+      };
+
+      const promptText =
+        "Analyze the provided bank statement and output a JSON object that adheres to the provided schema.";
+
+      const parts = [
+        {
+          inlineData: {
+            mimeType: fileBlob.type,
+            data: base64File,
+          },
+        },
+        {
+          text: promptText,
+        },
+      ];
+
+      // Get the generative model with the schema in the generation configuration.
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      });
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts }],
+      });
+      const generatedResponse = result.response;
+      const generatedText = await generatedResponse.text();
+
+      if (!generatedText) {
+        throw new Error("No content generated for a file.");
+      }
+
+      // Optionally, validate the JSON here
+      return JSON.parse(generatedText);
     };
 
-    // Minimal prompt text instructing the model to analyze and output JSON per the schema.
-    const promptText =
-      "Analyze the provided bank statement and output a JSON object that adheres to the provided schema.";
+    // Process all files concurrently
+    const results = await Promise.all(
+      fileFields.map((file) => processFile(file))
+    );
+    console.log("Combined results:", results);
 
-    // Prepare the parts with the file data and prompt text.
-    const parts = [
-      {
-        inlineData: {
-          mimeType: fileBlob.type,
-          data: base64File,
-        },
-      },
-      {
-        text: promptText,
-      },
-    ];
-
-    // Get the generative model with the response schema in the generation configuration.
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-      },
-    });
-
-    // Generate content with the model
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-    });
-
-    const generatedResponse = result.response;
-    // Await the text extraction (in case it's asynchronous)
-    const generatedText = await generatedResponse.text();
-
-    if (!generatedText) {
-      console.warn("Warning: Generated text is empty or null.");
-      return NextResponse.json(
-        { error: "No content generated. Retry your request!" },
-        { status: 204 }
-      );
-    }
-
-    console.log("Generated text:", generatedText);
-
-    // Validate the generated text against our expected JSON schema.
-    // const validatedData = validateGeneratedJson(generatedText);
-    // if (!validatedData) {
-    //   console.error(
-    //     "Validation failed: The generated JSON did not match the expected schema."
-    //   );
-    //   return NextResponse.json(
-    //     { error: "Generated JSON did not match the expected schema." },
-    //     { status: 500 }
-    //   );
-    // }
-
-    const jsonParse = JSON.parse(generatedText);
-
-    return NextResponse.json({ text: jsonParse }, { status: 200 });
+    return NextResponse.json({ text: results }, { status: 200 });
   } catch (error) {
-    console.error("Error processing file:", error);
+    console.error("Error processing files:", error);
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
