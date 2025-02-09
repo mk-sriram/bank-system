@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@google/generative-ai':
-        specifier: ^0.16.0
-        version: 0.16.0
+        specifier: ^0.21.0
+        version: 0.21.0
       '@headlessui/react':
         specifier: ^2.1.2
         version: 2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -107,8 +107,8 @@ packages:
   '@floating-ui/utils@0.2.7':
     resolution: {integrity: sha512-X8R8Oj771YRl/w+c1HqAC1szL8zWQRwFvgDwT129k9ACdBoud/+/rX9V0qiMl6LWUdP9voC2nDVZYPMQQsb6eA==}
 
-  '@google/generative-ai@0.16.0':
-    resolution: {integrity: sha512-doB5ZNxS6m+jUZqaLCeYXfBZCdq6Ho0ibkq5/17xe1qAUZpCLWlvCDGtqFPqqO+yezNmvGatS0KhV22yiOT3DA==}
+  '@google/generative-ai@0.21.0':
+    resolution: {integrity: sha512-7XhUbtnlkSEZK15kN3t+tzIMxsbKm/dSkKBFalj+20NvPKe1kBY7mR2P7vuijEn+f06z5+A8bVGKO0v39cr6Wg==}
     engines: {node: '>=18.0.0'}
 
   '@headlessui/react@2.1.2':
@@ -1148,7 +1148,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.7': {}
 
-  '@google/generative-ai@0.16.0': {}
+  '@google/generative-ai@0.21.0': {}
 
   '@headlessui/react@2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
