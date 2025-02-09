@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
       const base64File = buffer.toString("base64");
 
-      // Prepare JSON Schema and prompt (as before)
-      const schema = {
+      // Prepare JSON Schema and prompt 
+      const schema: SchemaType = {
         description:
           "Analysis of a bank statement for a single account's creditworthiness",
         type: SchemaType.OBJECT,
