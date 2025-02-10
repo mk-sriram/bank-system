@@ -38,7 +38,7 @@ const DropArea = () => {
       <div>
         <button
           onClick={simulateChainOfThought}
-          className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white font-medium rounded-md transition-colors duration-200 flex items-center justify-center mt-7 cursor-pointer"
+          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-md transition-colors duration-200 flex items-center justify-center mt-7 cursor-pointer"
           disabled={isLoading || files.length === 0}
         >
           {isLoading ? "Processing..." : "Next Step"}

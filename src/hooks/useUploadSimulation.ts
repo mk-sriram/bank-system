@@ -18,13 +18,15 @@ export default function useUploadSimulation() {
     setJsonData([]);
 
     const steps = [
-      "Analyzing file contents...",
-      "Extracting relevant information...",
-      "Applying natural language processing...",
-      "Identifying key entities and relationships...",
-      "Generating insights...",
-      "Summarizing findings...",
+      "Scanning and analyzing file contents",
+      "Extraction Agent",
+      "Structuring extracted data for processing",
+      "Recognizing relationships and connections",
+      "Insight Agent synthesizing: Identifying key entities",
+      "Correlating extracted insights with contextual knowledge",
+      "Generating insights",
     ];
+
     setChainOfThought(steps);
     setCurrentStep(0);
 
@@ -61,7 +63,7 @@ export default function useUploadSimulation() {
       // Assume the API returns an object with a property "text"
       serverResult = data.text;
       serverDone = true;
-      console.log(serverResult)
+      console.log(serverResult);
       if (!Array.isArray(serverResult)) {
         serverResult = [serverResult];
       }
