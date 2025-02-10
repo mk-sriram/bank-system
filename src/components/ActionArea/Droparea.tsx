@@ -52,7 +52,7 @@ const DropArea = () => {
         />
       )}
 
-      {jsonData && <CreditList finalJson={jsonData} currenState={isLoading} />}
+      {jsonData && <CreditList finalJson={jsonData} isLoading={isLoading} />}
     </div>
   );
 };

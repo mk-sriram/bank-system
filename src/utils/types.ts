@@ -9,5 +9,5 @@ export interface CreditItem {
 
 export type CreditListProps = {
   finalJson: CreditItem[];
-  currenState: boolean;
+  isLoading: boolean;
 };

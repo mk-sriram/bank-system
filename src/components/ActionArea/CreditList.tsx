@@ -3,19 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { CreditListProps } from "@/utils/types";
 
-export default function CreditList({ finalJson }: CreditListProps) {
+export default function CreditList({ finalJson, isLoading }: CreditListProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [loading, setLoading] = useState<boolean>(false);
 
-  // Set loading based on the presence of finalJson; fallback to 1500ms simulation.
-  useEffect(() => {
-    if (finalJson && Array.isArray(finalJson) && finalJson.length > 0) {
-      setLoading(false);
-    } else {
-      const timer = setTimeout(() => setLoading(false), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [finalJson]);
   //console.log("FNIALSJON", finalJson);
   const handleToggle = useCallback((index: number) => {
     setExpanded((prev) => ({
@@ -82,7 +72,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
     }
   }, []);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mx-auto mt-8 w-[38rem] bg-white shadow-lg sm:rounded-lg">
         <ul role="list" className="divide-y divide-gray-200">
