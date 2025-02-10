@@ -16,7 +16,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
       return () => clearTimeout(timer);
     }
   }, [finalJson]);
-  console.log("FNIALSJON", finalJson[0]);
+  //console.log("FNIALSJON", finalJson);
   const handleToggle = useCallback((index: number) => {
     setExpanded((prev) => ({
       ...prev,
@@ -114,7 +114,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
     );
   }
 
-  console.log(finalJson);
+  //console.log(finalJson);
   return (
     <div className="mx-auto mt-8 w-[38rem] bg-white shadow-lg sm:rounded-lg">
       <ul role="list" className="divide-y divide-gray-200">
@@ -143,7 +143,7 @@ export default function CreditList({ finalJson }: CreditListProps) {
                   />
                 </svg>
                 <p className="text-lg font-semibold text-gray-900">
-                  {person.accountNumber}
+                  {person.name}
                 </p>
               </div>
               <div>{renderCreditIcon(person.creditLevel)}</div>
@@ -151,9 +151,9 @@ export default function CreditList({ finalJson }: CreditListProps) {
             {/* Expanded panel */}
             {expanded[index] && (
               <div className="mt-2 text-sm text-gray-600 flex justify-end">
-                <p className="bg-gray-100 rounded-md px-4 py-2 w-full">
+                <pre className="bg-gray-100 rounded-md px-4 py-2 w-full whitespace-pre-wrap">
                   {person.description}
-                </p>
+                </pre>
               </div>
             )}
           </li>

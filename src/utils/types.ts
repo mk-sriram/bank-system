@@ -1,7 +1,7 @@
 type CreditLevel = "approved" | "declined" | "underReview";
 
 export interface CreditItem {
-  accountNumber: string;
+  name: string;
   creditLevel: CreditLevel;
   riskLevel?: "low" | "high";
   description: string[];

@@ -61,6 +61,10 @@ export default function useUploadSimulation() {
       // Assume the API returns an object with a property "text"
       serverResult = data.text;
       serverDone = true;
+      console.log(serverResult)
+      if (!Array.isArray(serverResult)) {
+        serverResult = [serverResult];
+      }
 
       // If the chain-of-thought simulation hasn't finished, jump to the final step.
       if (stepIndex < totalSteps) {

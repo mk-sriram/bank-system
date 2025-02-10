@@ -30,34 +30,36 @@ The input is provided as a JSON object that conforms to the following structure:
   - **Amount:** Use the numeric value directly (ensure debits are negative and credits are positive).
   - **Balance:** Use the numeric value representing the account balance after the transaction.
 
-### Fixed Scoring System & Thresholds:
+## Fixed Scoring System & Thresholds:
 1. **Initialize Base Score:**
    - Start with a base credit score of **100**.
 
 2. **Positive Contributions:**
-   - For each transaction classified as a consistent deposit (e.g., if TransactionDescription contains "Direct Credit" or "Transfer from"), **add 10 points**.
+   - For each transaction classified as a consistent deposit (if TransactionDescription contains "Direct Credit" or "Transfer from"), **add 10 points**.
    - For maintaining a high average balance (above a calculated threshold), **add 5 points**.
 
 3. **Negative Contributions:**
-   - For each transaction classified as a fee (e.g., if TransactionDescription contains "Account Fee") or an overdraft occurrence, **subtract 10 points**.
+   - For each transaction classified as a fee (if TransactionDescription contains "Account Fee") or an overdraft occurrence, **subtract 10 points**.
    - For each transaction that is a large or irregular withdrawal (if a withdrawal exceeds 20% of the average balance), **subtract 15 points**.
-3.5. NOrmaliation of the values
-    - finally divide the credit score by the total number of transactions , this is your actual credit score value
-4. **Final Score & Decision Thresholds:**
-   - **Approved:** If the final credit score is **120 or above**.
-   - **UnderReview:** If the final credit score is **between 90 and 119**. In this case, assign a risk level as follows:
-       - "low" risk if the score is between **106 and 119**.
-       - "medium" risk if the score is between **96 and 105**.
-       - "high" risk if the score is between **90 and 95**.
-   - **Declined:** If the final credit score is **below 90**.
+
+4. **Normalization:**
+   - After summing the contributions from all transactions, divide the total score by the number of transactions. This normalized score is the actual credit score value.
+
+5. **Final Decision Thresholds:**
+   - **Approved:** If the normalized credit score is **3.5 or above**.
+   - **UnderReview:** If the normalized credit score is **between 2.5 and 3.49**. In this case, assign a risk level as follows:
+       - "low" risk if the score is between **3.0 and 3.49**.
+       - "medium" risk if the score is between **2.75 and 2.99**.
+       - "high" risk if the score is between **2.5 and 2.74**.
+   - **Declined:** If the normalized credit score is **below 2.5**.
 
 ### Output Requirements:
 Your final output must be a valid JSON object that adheres to the following structure:
 {
-  "accountNumber": "<extracted account number from metadata>",
+  "name": "<Name of the individual extracted from the information>",
   "creditLevel": "<approved | underReview | declined>",
   "riskLevel": "<low | medium | high>", // Only applicable if creditLevel is 'underReview'; otherwise, this can be null.
-  "description": [ "<detailed explanation of the factors, calculations, and thresholds used>" ]
+  "description": [ "<summary explanation of the factors, calculations, and thresholds used>" ]
 }
 
 ### Instructions for Analysis:
@@ -122,9 +124,9 @@ export const BankStatementAnalyzerSchema: any = {
     "Analysis of a bank statement for a single account's creditworthiness",
   type: SchemaType.OBJECT,
   properties: {
-    accountNumber: {
+    name: {
       type: SchemaType.STRING,
-      description: "Actual account number extracted from the bank statement",
+      description: "Name of the individual extracted from the information",
     },
     creditLevel: {
       type: SchemaType.STRING,
@@ -138,14 +140,12 @@ export const BankStatementAnalyzerSchema: any = {
       nullable: true,
     },
     description: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.STRING,
-      },
-      description: "List of reasons supporting the credit decision",
+      type: SchemaType.STRING,
+      description:
+        "List of summary of the reasons supporting the credit decision",
     },
   },
-  required: ["accountNumber", "creditLevel", "description"],
+  required: ["name", "creditLevel", "description"],
 };
 
 export const DataExtractionSchema = {
@@ -155,9 +155,9 @@ export const DataExtractionSchema = {
       type: SchemaType.OBJECT,
       description: "Metadata extracted from the bank statement",
       properties: {
-        accountNumber: {
+        name: {
           type: SchemaType.STRING,
-          description: "The account number extracted from the bank statement",
+          description: "The account name extracted from the bank statement",
         },
         fileName: {
           type: SchemaType.STRING,
@@ -168,7 +168,7 @@ export const DataExtractionSchema = {
           description: "The name of the account holder",
         },
       },
-      required: ["accountNumber", "fileName", "personName"],
+      required: ["name", "fileName", "personName"],
     },
     transactions: {
       type: SchemaType.ARRAY,
@@ -202,33 +202,3 @@ export const DataExtractionSchema = {
   },
   required: ["metadata", "transactions"],
 };
-// export const BankTransactionsSchema = {
-//   description: "Extracted bank transactions from a bank statement",
-//   type: SchemaType.ARRAY,
-//   items: {
-//     type: SchemaType.OBJECT,
-//     properties: {
-//       Date: {
-//         type: SchemaType.STRING,
-//         description:
-//           "The date of the transaction in MMDDYY format (e.g., '101517' for October 15, 2017)",
-//       },
-//       TransactionDescription: {
-//         type: SchemaType.STRING,
-//         description:
-//           "The full description of the transaction (e.g., 'Alinta Sales Pty Ltd NetBank BPAY 2733 0400032246')",
-//       },
-//       Amount: {
-//         type: SchemaType.NUMBER,
-//         description:
-//           "The transaction amount (negative for debits, positive for credits)",
-//       },
-//       Balance: {
-//         type: SchemaType.NUMBER,
-//         description:
-//           "The account balance after the transaction, represented as a number",
-//       },
-//     },
-//     required: ["Date", "TransactionDescription", "Amount", "Balance"],
-//   },
-// };
