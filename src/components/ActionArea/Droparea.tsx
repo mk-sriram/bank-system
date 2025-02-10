@@ -26,7 +26,7 @@ const DropArea = () => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full">
+    <div className="flex flex-col items-center w-full pb-7 mb-9">
       <FileDropzone
         files={files}
         previews={previews}
