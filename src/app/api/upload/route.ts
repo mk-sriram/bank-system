@@ -6,7 +6,7 @@ export const maxDuration = 60;
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { Buffer } from "buffer";
-
+import { dataExtractionPrompt, DataExtractionSchema } from "./prompts";
 // Initialize the Google Generative AI client
 const initializeGenAI = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -18,65 +18,65 @@ const initializeGenAI = () => {
 };
 
 // Validate that the generated text is a valid JSON matching our schema.
-const validateGeneratedJson = (text: string): object | null => {
-  try {
-    const data = JSON.parse(text);
+// const validateGeneratedJson = (text: string): object | null => {
+//   try {
+//     const data = JSON.parse(text);
 
-    // Validate accountNumber: it should be a string starting with "ACC-"
-    if (
-      typeof data.accountNumber !== "string" ||
-      !data.accountNumber.startsWith("ACC-")
-    ) {
-      console.error(
-        "Validation error: accountNumber missing or invalid",
-        data.accountNumber
-      );
-      return null;
-    }
+//     // Validate accountNumber: it should be a string starting with "ACC-"
+//     if (
+//       typeof data.accountNumber !== "string" ||
+//       !data.accountNumber.startsWith("ACC-")
+//     ) {
+//       console.error(
+//         "Validation error: accountNumber missing or invalid",
+//         data.accountNumber
+//       );
+//       return null;
+//     }
 
-    // Validate creditLevel: must be one of the allowed values.
-    if (!["approved", "declined", "underReview"].includes(data.creditLevel)) {
-      console.error("Validation error: creditLevel invalid", data.creditLevel);
-      return null;
-    }
+//     // Validate creditLevel: must be one of the allowed values.
+//     if (!["approved", "declined", "underReview"].includes(data.creditLevel)) {
+//       console.error("Validation error: creditLevel invalid", data.creditLevel);
+//       return null;
+//     }
 
-    // Validate riskLevel:
-    // - If creditLevel is "underReview", riskLevel must be one of the allowed values.
-    // - Otherwise, riskLevel should be null.
-    if (data.creditLevel === "underReview") {
-      if (!["low", "medium", "high"].includes(data.riskLevel)) {
-        console.error(
-          "Validation error: riskLevel invalid for underReview",
-          data.riskLevel
-        );
-        return null;
-      }
-    } else if (data.riskLevel !== null) {
-      console.error(
-        "Validation error: riskLevel should be null for approved/declined",
-        data.riskLevel
-      );
-      return null;
-    }
+//     // Validate riskLevel:
+//     // - If creditLevel is "underReview", riskLevel must be one of the allowed values.
+//     // - Otherwise, riskLevel should be null.
+//     if (data.creditLevel === "underReview") {
+//       if (!["low", "medium", "high"].includes(data.riskLevel)) {
+//         console.error(
+//           "Validation error: riskLevel invalid for underReview",
+//           data.riskLevel
+//         );
+//         return null;
+//       }
+//     } else if (data.riskLevel !== null) {
+//       console.error(
+//         "Validation error: riskLevel should be null for approved/declined",
+//         data.riskLevel
+//       );
+//       return null;
+//     }
 
-    // Validate description: must be an array of strings.
-    if (
-      !Array.isArray(data.description) ||
-      !data.description.every((item: any) => typeof item === "string")
-    ) {
-      console.error(
-        "Validation error: description is not an array of strings",
-        data.description
-      );
-      return null;
-    }
+//     // Validate description: must be an array of strings.
+//     if (
+//       !Array.isArray(data.description) ||
+//       !data.description.every((item: any) => typeof item === "string")
+//     ) {
+//       console.error(
+//         "Validation error: description is not an array of strings",
+//         data.description
+//       );
+//       return null;
+//     }
 
-    return data;
-  } catch (e) {
-    console.error("Validation error: Could not parse JSON", e);
-    return null;
-  }
-};
+//     return data;
+//   } catch (e) {
+//     console.error("Validation error: Could not parse JSON", e);
+//     return null;
+//   }
+// };
 
 export async function POST(request: NextRequest) {
   console.log("API POST request received");
@@ -107,41 +107,7 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
       const base64File = buffer.toString("base64");
 
-      // Prepare JSON Schema and prompt 
-      const schema: SchemaType = {
-        description:
-          "Analysis of a bank statement for a single account's creditworthiness",
-        type: SchemaType.OBJECT,
-        properties: {
-          accountNumber: {
-            type: SchemaType.STRING,
-            description:
-              "Actual account number extracted from the bank statement",
-          },
-          creditLevel: {
-            type: SchemaType.STRING,
-            enum: ["approved", "declined", "underReview"],
-            description: "Credit decision for the account holder",
-          },
-          riskLevel: {
-            type: SchemaType.STRING,
-            enum: ["low", "medium", "high"],
-            description: "Risk level if creditLevel is 'underReview'",
-            nullable: true,
-          },
-          description: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.STRING,
-            },
-            description: "List of reasons supporting the credit decision",
-          },
-        },
-        required: ["accountNumber", "creditLevel", "description"],
-      };
-
-      const promptText =
-        "Analyze the provided bank statement and output a JSON object that adheres to the provided schema.";
+      // Prepare JSON Schema and prompt
 
       const parts = [
         {
@@ -151,7 +117,7 @@ export async function POST(request: NextRequest) {
           },
         },
         {
-          text: promptText,
+          text: dataExtractionPrompt,
         },
       ];
 
@@ -160,7 +126,7 @@ export async function POST(request: NextRequest) {
         model: "gemini-2.0-flash",
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: schema,
+          responseSchema: DataExtractionSchema,
         },
       });
 
@@ -184,7 +150,7 @@ export async function POST(request: NextRequest) {
     );
     console.log("Combined results:", results);
 
-    return NextResponse.json({ text: results }, { status: 200 });
+    // return NextResponse.json({ text: results }, { status: 200 });
   } catch (error) {
     console.error("Error processing files:", error);
     if (error instanceof Error) {
