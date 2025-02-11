@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         processAnalyzerData(extractedData, genAI)
       )
     );
-    //console.log("Analyzer Results:", analyzerResults);
+    console.log("Analyzer Results:", analyzerResults);
 
     return NextResponse.json({ text: analyzerResults }, { status: 200 });
   } catch (error) {
